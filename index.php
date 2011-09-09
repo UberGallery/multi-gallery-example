@@ -5,7 +5,7 @@
 <head>
     <title>XHTML Transitional Template</title>
     
-    <link rel="shortcut icon" href="images/xhtml.png" />
+    <link rel="shortcut icon" href="images/favicon.png" />
 
     <link rel="stylesheet" type="text/css" href="css/rebase-min.css" />
     <link rel="stylesheet" type="text/css" href="css/style.css" />
