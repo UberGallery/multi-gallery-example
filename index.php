@@ -23,6 +23,8 @@
     });
     </script>
     
+    <?php if(file_exists('googleAnalytics.inc')) { include('googleAnalytics.inc'); } ?>
+
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
 </head>
 
