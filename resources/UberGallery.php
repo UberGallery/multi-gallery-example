@@ -18,7 +18,7 @@
 class UberGallery {
     
     // Define application version
-    const VERSION = '2.2.2';
+    const VERSION = '2.2.4';
     
     // Set default config variables
     protected $_cacheExpire = 0;
@@ -32,7 +32,6 @@ class UberGallery {
     // Reserve some other variables
     protected $_imgDir      = NULL;
     protected $_appDir      = NULL;
-    protected $_workingDir  = NULL;
     protected $_index       = NULL;
     protected $_rThumbsDir  = NULL;
     protected $_rImgDir     = NULL;
@@ -53,12 +52,14 @@ class UberGallery {
         // Set class directory constant
         if(!defined('__DIR__')) {
             $iPos = strrpos(__FILE__, "/");
-            define("__DIR__", substr(__FILE__, 0, $iPos) . "/");
+            define("__DIR__", substr(__FILE__, 0, $iPos));
         }
         
-        // Set configuration file path
-        $configPath = __DIR__ . '/galleryConfig.ini';
+        // Set application directory
+        $this->_appDir = __DIR__;
         
+        // Set configuration file path
+        $configPath = $this->_appDir . '/galleryConfig.ini';
         
         // Read and apply gallery config or throw error on fail
         if (file_exists($configPath)) {
@@ -70,7 +71,7 @@ class UberGallery {
             $this->_thumbSize   = $config['basic_settings']['thumbnail_size'];
             $this->_themeName   = $config['basic_settings']['theme_name'];
             $this->_imgSortBy   = $config['advanced_settings']['images_sort_by'];
-            $this->_cacheDir    = __DIR__ . '/' . $config['advanced_settings']['cache_directory'];
+            $this->_cacheDir    = $this->_appDir . '/' . $config['advanced_settings']['cache_directory'];
             
             if ($config['basic_settings']['enable_pagination']) {
                 $this->_imgPerPage = $config['advanced_settings']['images_per_page'];
@@ -173,7 +174,7 @@ class UberGallery {
                 
             if ($gallery['stats']['current_page'] > 1) {
                 $previousPage = $gallery['stats']['current_page'] - 1;
-                echo "                <li><a title=\"Previous Page\" href=\"index.php?page={$previousPage}\">&lt;</a></li>" . PHP_EOL;
+                echo "                <li><a title=\"Previous Page\" href=\"?page={$previousPage}\">&lt;</a></li>" . PHP_EOL;
             } else {
                 echo '                <li class="inactive">&lt;</li>' . PHP_EOL;
             }
@@ -182,13 +183,13 @@ class UberGallery {
                 if($x == $gallery['stats']['current_page']) {
                     echo "                    <li class=\"current\">{$x}</li>" . PHP_EOL;
                 } else {
-                    echo "                    <li><a title=\"Page {$x}\" href=\"index.php?page={$x}\">{$x}</a></li>" . PHP_EOL;
+                    echo "                    <li><a title=\"Page {$x}\" href=\"?page={$x}\">{$x}</a></li>" . PHP_EOL;
                 }
             }
                 
             if ($gallery['stats']['current_page'] < $gallery['stats']['total_pages']) {
                 $nextPage = $gallery['stats']['current_page'] + 1;
-                echo "                <li><a title=\"Next Page\" href=\"index.php?page={&nextPage}\">&gt;</a></li>" . PHP_EOL;
+                echo "                <li><a title=\"Next Page\" href=\"?page={$nextPage}\">&gt;</a></li>" . PHP_EOL;
             } else {
                 echo '                <li class="inactive">&gt;</li>' . PHP_EOL;
             }
@@ -256,7 +257,7 @@ class UberGallery {
      * @access public
      */
     public function getThemeName() {
-        // Return the theme Name
+        // Return the theme name
         return $this->_themeName;
     }
     
@@ -268,12 +269,13 @@ class UberGallery {
      */
     public function getThemePath($absolute = false) {
         if ($absolute) {
-            $path = '/resources/themes/' . $this->_themeName;
+            // Set the theme path
+            $themePath = $this->_appDir . '/themes/' . $this->_themeName;
         } else {
-            $path = 'resources/themes/' . $this->_themeName;
+            $themePath = 'resources/themes/' . $this->_themeName;
         }
         
-        return $path;
+        return $themePath;
     }
     
     /**
