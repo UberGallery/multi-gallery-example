@@ -32,6 +32,15 @@
 
     <div class="pageWrap">
         
+        <h1 id="pageTitle">Multi-directory Gallery Demo</h1>
+        
+        <p>
+            This is a demonstration of a multi-directory <a href="http://www.ubergallery.net">UberGallery</a> 
+            installation. Each section below is pulling from a seperate directory of images and will only
+            cycle images within their sections.  You can view the underlying code for this page
+            <a href="https://github.com/UberGallery/multi-gallery-example">on the UberGallery Github page</a>.
+        </p>
+        
         <?php include_once('resources/UberGallery.php'); ?>
         
         <h2>Cats</h2>
