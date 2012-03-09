@@ -18,12 +18,13 @@
 class UberGallery {
     
     // Define application version
-    const VERSION = '2.2.4';
+    const VERSION = '2.2.9';
     
     // Set default config variables
     protected $_cacheExpire = 0;
     protected $_imgPerPage  = 0;
     protected $_thumbSize   = 100;
+    protected $_threshold   = 10;
     protected $_themeName   = 'uber-blue';
     protected $_page        = 1;
     protected $_cacheDir    = 'cache';
@@ -35,7 +36,6 @@ class UberGallery {
     protected $_index       = NULL;
     protected $_rThumbsDir  = NULL;
     protected $_rImgDir     = NULL;
-    
     
     /**
      * UberGallery construct function. Runs on object creation.
@@ -51,8 +51,7 @@ class UberGallery {
         
         // Set class directory constant
         if(!defined('__DIR__')) {
-            $iPos = strrpos(__FILE__, "/");
-            define("__DIR__", substr(__FILE__, 0, $iPos));
+            define('__DIR__', dirname(__FILE__));
         }
         
         // Set application directory
@@ -74,6 +73,7 @@ class UberGallery {
             $this->_cacheDir    = $this->_appDir . '/' . $config['advanced_settings']['cache_directory'];
             
             if ($config['basic_settings']['enable_pagination']) {
+                $this->_threshold  = $config['basic_settings']['paginator_threshold'];
                 $this->_imgPerPage = $config['advanced_settings']['images_per_page'];
             } else {
                 $this->_imgPerPage = 0; 
@@ -83,42 +83,9 @@ class UberGallery {
             $this->setSystemMessage('error', "Unable to read galleryConfig.ini, please make sure the file exists at: <pre>{$configPath}</pre>");
         }
 
-        // Explode working dir and cache dir into arrays
-        $workingDirArray = explode('/', getcwd());
-        $cacheDirArray   = explode('/', $this->_cacheDir);
-        
-        // Get largest array count
-        $arrayMax = max(count($workingDirArray), count($cacheDirArray));
-        
-        // Set some default variables
-        $diffArray  = array();
-        $samePath   = true;
-        $key        = 1;
-        
-        // Generate array of the path differences
-        while ($key <= $arrayMax) {
-            if (@$cacheDirArray[$key] !== @$workingDirArray[$key] || $samePath !== true) {
-                
-                // Prepend '..' for every level up that must be traversed
-                if (isset($workingDirArray[$key])) {
-                    array_unshift($diffArray, '..');
-                }
-                
-                // Append directory name for every directory that must be traversed  
-                if (isset($cacheDirArray[$key])) {
-                    $diffArray[] = $cacheDirArray[$key];
-                } 
-                
-                // Directory paths have diverged
-                $samePath = false;
-            }
-            
-            // Increment key
-            $key++;
-        }
+        // Get the relative thumbs directory path
+        $this->_rThumbsDir = $this->_getRelativePath(getcwd(), $this->_cacheDir);
 
-        // Set the relative thumbnail directory path
-        $this->_rThumbsDir = implode('/', $diffArray);
 
         // Check if cache directory exists and create it if it doesn't
         if (!file_exists($this->_cacheDir)) {
@@ -170,28 +137,21 @@ class UberGallery {
         
         if ($gallery['stats']['total_pages'] > 1) {
             echo '        <ul id="galleryPagination">' . PHP_EOL;
-            echo "            <li class=\"title\">Page {$gallery['stats']['current_page']} of {$gallery['stats']['total_pages']}</li>" . PHP_EOL;
+            
+            foreach ($gallery['paginator'] as $item) {
                 
-            if ($gallery['stats']['current_page'] > 1) {
-                $previousPage = $gallery['stats']['current_page'] - 1;
-                echo "                <li><a title=\"Previous Page\" href=\"?page={$previousPage}\">&lt;</a></li>" . PHP_EOL;
-            } else {
-                echo '                <li class="inactive">&lt;</li>' . PHP_EOL;
-            }
-                
-            for($x = 1; $x <= $gallery['stats']['total_pages']; $x++) {
-                if($x == $gallery['stats']['current_page']) {
-                    echo "                    <li class=\"current\">{$x}</li>" . PHP_EOL;
+                if (!empty($item['href'])) {
+                    $itemText = "<a href=\"{$item['href']}\">{$item['text']}</a>";
                 } else {
-                    echo "                    <li><a title=\"Page {$x}\" href=\"?page={$x}\">{$x}</a></li>" . PHP_EOL;
+                    $itemText = $item['text'];
                 }
-            }
                 
-            if ($gallery['stats']['current_page'] < $gallery['stats']['total_pages']) {
-                $nextPage = $gallery['stats']['current_page'] + 1;
-                echo "                <li><a title=\"Next Page\" href=\"?page={$nextPage}\">&gt;</a></li>" . PHP_EOL;
-            } else {
-                echo '                <li class="inactive">&gt;</li>' . PHP_EOL;
+                if (!empty($item['class'])) {
+                    echo "            <li class=\"{$item['class']}\">{$itemText}</li>" . PHP_EOL;
+                } else {
+                    echo "            <li>{$itemText}</li>" . PHP_EOL;
+                }
+                
             }
             
             echo '        </ul>' . PHP_EOL;
@@ -243,6 +203,9 @@ class UberGallery {
             // Add statistics to gallery array
             $galleryArray['stats'] = $this->_readGalleryStats($this->_readDirectory($directory, false));
             
+            // Add gallery paginator to the gallery array
+            $galleryArray['paginator'] = $this->_getPaginatorArray($galleryArray['stats']['current_page'], $galleryArray['stats']['total_pages']);
+            
             // Save the sorted array
             $this->_createIndex($galleryArray, $this->_index);
         }
@@ -272,7 +235,11 @@ class UberGallery {
             // Set the theme path
             $themePath = $this->_appDir . '/themes/' . $this->_themeName;
         } else {
-            $themePath = 'resources/themes/' . $this->_themeName;
+            // Get relative path to application dir
+            $realtivePath = $this->_getRelativePath(getcwd(), $this->_appDir);
+            
+            // Set the theme path
+            $themePath = $realtivePath . '/themes/' . $this->_themeName;
         }
         
         return $themePath;
@@ -299,9 +266,14 @@ class UberGallery {
      * @return string
      */
     public function getColorboxStyles($themeNum) {
-        $path = 'resources/colorbox/' . $themeNum . '/colorbox.css';
         
-        return '<link rel="stylesheet" type="text/css" href="' . $path . '" />';
+        // Get relative path to application dir
+        $realtivePath = $this->_getRelativePath(getcwd(), $this->_appDir);
+        
+        // Set Colorbox Path
+        $colorboxPath = $realtivePath . '/colorbox/' . $themeNum . '/colorbox.css';
+        
+        return '<link rel="stylesheet" type="text/css" href="' . $colorboxPath . '" />';
     }
 
     /**
@@ -620,6 +592,130 @@ class UberGallery {
         return $statsArray;
     }
     
+    /**
+     * Returns a formatted array for the gallery paginator.
+     * 
+     * @param int $currentPage The current page being viewed
+     * @param int $totalPages Total number of pages in the gallery
+     * @return array
+     * @access protected
+     */
+    protected function _getPaginatorArray($currentPage, $totalPages) {
+        
+        // Set some variables
+        $range     = ceil($this->_threshold / 2) - 1;
+        $firstPage = $currentPage - $range;
+        $lastPage  = $currentPage + $range;
+
+        // Ensure first page is within the bounds of available pages
+        if ($firstPage <= 1) {
+            $firstDiff = 1 - $firstPage;
+            $firstPage = 1;
+        }
+        
+        // Ensure last page is within the bounds of available pages
+        if ($lastPage >= $totalPages) {
+            $lastDiff = $lastPage - $totalPages;
+            $lastPage = $totalPages;
+        }
+        
+        // Apply page differences
+        $lastPage  = $lastPage + $firstDiff;
+        $firstPage = $firstPage - $lastDiff;
+        
+        // Recheck first and last page to ensure they're within proper bounds
+        if ($firstPage <= 1 && $lastPage >= $totalPages) {
+            $firstPage = 1;
+            $lastPage  = $totalPages;
+        }
+        
+        // Create title element
+        $paginatorArray[] = array(
+            'text'  => 'Page ' . $currentPage . ' of ' . $totalPages,
+            'class' => 'title'
+        );
+        
+        // Create previous page element
+        if ($currentPage == 1) {
+            
+            $paginatorArray[] = array(
+                'text'  => '&lt;',
+                'class' => 'inactive'
+            );
+            
+        } else {
+            
+            $paginatorArray[] = array(
+                'text'  => '&lt;',
+                'class' => 'active',
+                'href'  => '?page=' . ($currentPage - 1)
+            );
+            
+        }
+        
+        // Set previous overflow
+        if ($firstPage > 1) {
+            $paginatorArray[] = array(
+                'text'  => '...',
+                'class' => 'more',
+                'href'  => '?page=' . ($currentPage - $range - 1)
+            );
+        }
+        
+        // Generate the page elelments
+        for ($i = $firstPage; $i <= $lastPage; $i++) {
+            
+            if ($i == $currentPage) {
+                
+                $paginatorArray[] = array(
+                    'text'  => $i,
+                    'class' => 'current'
+                );
+                
+            } else {
+                
+                $paginatorArray[] = array(
+                    'text'  => $i,
+                    'class' => 'active',
+                    'href'  => '?page=' . $i
+                );
+                
+            }
+            
+        }
+        
+        // Set next overflow 
+        if ($lastPage < $totalPages) {
+            $paginatorArray[] = array(
+                'text'  => '...',
+                'class' => 'more',
+                'href'  => '?page=' . ($currentPage + $range + 1)
+            );
+        }
+        
+        // Create next page element
+        if ($currentPage == $totalPages) {
+            
+            $paginatorArray[] = array(
+                'text'  => '&gt;',
+                'class' => 'inactive'
+            );
+            
+        } else {
+            
+            $paginatorArray[] = array(
+                'text'  => '&gt;',
+                'class' => 'active',
+                'href'  => '?page=' . ($currentPage + 1)
+            );
+            
+        }
+        
+        // Return the paginator array
+        return $paginatorArray;
+        
+    }
+    
     
     /**
      * Sorts an array by the provided sort method.
@@ -739,7 +835,12 @@ class UberGallery {
      */
     protected function _isImage($filePath) {
         // Get file type
-        $imgType = @exif_imagetype($filePath);
+        if (function_exists('exif_imagetype')) {
+            $imgType = @exif_imagetype($filePath);
+        } else {
+            $imgArray = @getimagesize($filePath);
+            $imgType = $imgArray[2];
+        }
 
         // Array of accepted image types
         $allowedTypes = array(1, 2, 3);
@@ -750,6 +851,80 @@ class UberGallery {
         } else {
             return false;
         }
+    }
+    
+    
+    /**
+     * Compares two paths and returns the relative path from one to the other
+     * 
+     * @param string $fromPath Starting path
+     * @param string $toPath Ending path
+     * @return string $relativePath
+     * @access protected
+     */
+    protected function _getRelativePath($fromPath, $toPath) {
+        
+        // Define the OS specific directory separator
+        if (!defined('DS')) define('DS', DIRECTORY_SEPARATOR);
+        
+        // Remove double slashes from path strings
+        $fromPath   = str_replace(DS . DS, DS, $fromPath);
+        $toPath     = str_replace(DS . DS, DS, $toPath);
+        
+        // Explode working dir and cache dir into arrays
+        $fromPathArray  = explode(DS, $fromPath);
+        $toPathArray    = explode(DS, $toPath);
+        
+        // Remove last fromPath array element if it's empty
+        $x = count($fromPathArray) - 1;
+        
+        if(!trim($fromPathArray[$x])) {
+            array_pop($fromPathArray);
+        }
+        
+        // Remove last toPath array element if it's empty
+        $x = count($toPathArray) - 1;
+        
+        if(!trim($toPathArray[$x])) {
+            array_pop($toPathArray);
+        }
+        
+        // Get largest array count
+        $arrayMax = max(count($fromPathArray), count($toPathArray));
+        
+        // Set some default variables
+        $diffArray  = array();
+        $samePath   = true;
+        $key        = 1;
+        
+        // Generate array of the path differences
+        while ($key <= $arrayMax) {
+            if (@$toPathArray[$key] !== @$fromPathArray[$key] || $samePath !== true) {
+                
+                // Prepend '..' for every level up that must be traversed
+                if (isset($fromPathArray[$key])) {
+                    array_unshift($diffArray, '..');
+                }
+                
+                // Append directory name for every directory that must be traversed  
+                if (isset($toPathArray[$key])) {
+                    $diffArray[] = $toPathArray[$key];
+                } 
+                
+                // Directory paths have diverged
+                $samePath = false;
+            }
+            
+            // Increment key
+            $key++;
+        }
+
+        // Set the relative thumbnail directory path
+        $relativePath = implode('/', $diffArray);
+        
+        // Return the relative path
+        return $relativePath;
+        
     }
 
 }

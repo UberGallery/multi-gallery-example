@@ -9,7 +9,7 @@
     <link rel="stylesheet" type="text/css" href="<?php echo THEMEPATH; ?>/style.css" />
     <?php echo $gallery->getColorboxStyles(1); ?>
     
-    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.6.4/jquery.min.js"></script>
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7/jquery.min.js"></script>
     <script type="text/javascript" src="resources/colorbox/jquery.colorbox.js"></script>
     
     <script type="text/javascript">
@@ -49,27 +49,17 @@
     
         <?php if ($galleryArray['stats']['total_pages'] > 1): ?>
         <ul id="galleryPagination">
-            <li class="title">Page <?php echo $galleryArray['stats']['current_page']; ?> of <?php echo $galleryArray['stats']['total_pages']; ?></li>
             
-            <?php if ($galleryArray['stats']['current_page'] > 1): ?>
-                <li><a title="Previous Page" href="?page=<?php echo $galleryArray['stats']['current_page'] - 1; ?>">&lt;</a></li>
-            <?php else: ?>
-                <li class="inactive">&lt;</li>
-            <?php endif; ?>
+            <?php foreach ($galleryArray['paginator'] as $item): ?>
+                
+                <li class="<?php echo $item['class']; ?>">
+                    <?php if (!empty($item['href'])): ?>
+                        <a href="<?php echo $item['href']; ?>"><?php echo $item['text']; ?></a>
+                    <?php else: ?><?php echo $item['text']; ?><?php endif; ?>
+                </li>
             
-            <?php for($x = 1; $x <= $galleryArray['stats']['total_pages']; $x++): ?>
-                <?php if($x == $galleryArray['stats']['current_page']): ?>
-                    <li class="current"><?php echo $x; ?></li>
-                <?php else: ?>
-                    <li><a title="Page <?php echo $x; ?>" href="?page=<?php echo $x; ?>"><?php echo $x; ?></a></li>
-                <?php endif; ?>
-            <?php endfor; ?>
+            <?php endforeach; ?>
             
-            <?php if ($galleryArray['stats']['current_page'] < $galleryArray['stats']['total_pages']): ?>
-                <li><a title="Next Page" href="?page=<?php echo $galleryArray['stats']['current_page'] + 1; ?>">&gt;</a></li>
-            <?php else: ?>
-                <li class="inactive">&gt;</li>
-            <?php endif; ?>
         </ul>
         <?php endif; ?>
         
