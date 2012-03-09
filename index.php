@@ -1,7 +1,8 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+
+<?php include_once('resources/UberGallery.php'); ?>
+
 <head>
     <title>XHTML Transitional Template</title>
     
@@ -41,17 +42,18 @@
             <a href="https://github.com/UberGallery/multi-gallery-example">on the UberGallery Github page</a>.
         </p>
         
-        <?php include_once('resources/UberGallery.php'); ?>
-        
-        <h2>Cats</h2>
-        <?php $gallery = UberGallery::init()->createGallery('galleries/cats', 'cats'); ?>
-        
-        <h2>Dogs</h2>
-        <?php $gallery = UberGallery::init()->createGallery('galleries/dogs', 'dogs'); ?>
-        
-        <h2>Miscellaneous</h2>
-        <?php $gallery = UberGallery::init()->createGallery('galleries/misc', 'misc'); ?>
-        
+        <?php $files = scandir('galleries'); ?>
+        <?php foreach ($files as $file): ?>
+            
+            <?php $dir = realpath('galleries/' . $file); ?>
+            
+            <?php if (is_dir($dir) && $file != '.' && $file != '..'): ?>
+                <h2><?php echo ucwords($file); ?></h2>
+                <?php $gallery = UberGallery::init()->createGallery($dir, $file); ?>
+            <?php endif; ?>
+            
+        <?php endforeach; ?>
+                
     </div>
 
 </body>
