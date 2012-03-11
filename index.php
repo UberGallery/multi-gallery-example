@@ -45,7 +45,7 @@
         <?php $files = scandir('galleries'); ?>
         <?php foreach ($files as $file): ?>
             
-            <?php $dir = realpath('galleries/' . $file); ?>
+            <?php $dir = 'galleries/' . $file; ?>
             
             <?php if (is_dir($dir) && $file != '.' && $file != '..'): ?>
                 <h2><?php echo ucwords($file); ?></h2>
