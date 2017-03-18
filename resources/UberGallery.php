@@ -464,7 +464,7 @@ class UberGallery {
         
         // If file already exists return relative path to thumbnail
         if (file_exists($destination)) {
-            $relativePath = $this->_rThumbsDir . '/' . $fileName;
+            $relativePath = $this->_rThumbsDir . '/cache/' . $fileName;
             return $relativePath;
         }
         
